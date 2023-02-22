@@ -395,7 +395,7 @@ unordered_map<string, vector<vector<double>>> SVDecomp(vector<vector<double>> A)
 
 
 class Matrix{
-    // Manipulate as a class. Doesn't feel that useful since you can't inherit from std::vector
+    // Manipulate as a class 
     public:
     vector<vector<double>> mat;
     vector<double> eigenvals;
@@ -421,8 +421,10 @@ class Matrix{
         mat = linalg::inverse(mat);
     }
 
-    void get_eigenvals(){
-        eigenvals = linalg::eigenvalues(mat);
+    void get_eigens(){
+        unordered_map<string, vector<vector<double>>> AQR = linalg::QRAlgorithm(mat, 1000);
+        eigenvals = linalg::diagonal(AQR["A"]);
+        eigenvectors = AQR["Q"];
     }
 
     void print_matrix(){
