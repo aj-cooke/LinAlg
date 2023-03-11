@@ -7,24 +7,25 @@ using namespace std;
 
 // TODO: LU, redo OOP (1.0), parallelism (2.0), arrays and pointers (3.0)
 
-namespace linalg
-{
+namespace linalg{
 
 vector<vector<double>> rcdrop(vector<vector<double>> A, int r, int c){
     // get matrix by deleting a row and column, used for determinants and inverses
-    vector<vector<double>> newMat;
+    vector<vector<double>> new_mat(c-1, vector<double>(r-1));
+    int adj_i, adj_j;
+
     for(int i = 0; i < A.size(); i++){
         if(i != r){
-            vector<double> newRow;
-            for(int l = 0; l < A[0].size(); l++){
-                if(l != c){
-                    newRow.push_back(A[i][l]);
+            for(int j = 0; j < A[0].size(); j++){
+                if(i != r && j != c){
+                    if(i > r){adj_i = i-1;}else{adj_i = i;}
+                    if(j > c){adj_j = j-1;}else{adj_j = j;}
+                    new_mat[adj_i][adj_j] = A[i][j];
                 }
             }
-            newMat.push_back(newRow);
-        }
-    }
-    return newMat;
+        } 
+    }  
+    return new_mat;
 }
 
 vector<vector<double>> matmul(vector<vector<double>> A, vector<vector<double>> B){
@@ -32,19 +33,18 @@ vector<vector<double>> matmul(vector<vector<double>> A, vector<vector<double>> B
     if(A[0].size() != B.size()){
         throw "num A rows must == num B cols";
     }
-    vector<vector<double>> newMat;
+    vector<vector<double>> new_mat(A.size(), vector<double>(B[0].size()));
     for(int row = 0; row < A.size(); row++){
-        vector<double> curRow;
         for(int col = 0; col < B[0].size(); col++){
-            double curVal = 0;
+            double cur_val = 0;
             for(int ind = 0; ind < A[0].size(); ind ++){
-                curVal += A[row][ind] * B[ind][col]; // Matrix i,j value is the dot product of A row and B column
+                cur_val += A[row][ind] * B[ind][col]; // Matrix i,j value is the dot product of A row and B column
             }
-            curRow.push_back(curVal);
+            new_mat[row][col] = cur_val;
         }
-        newMat.push_back(curRow);
+
     }
-    return newMat;
+    return new_mat;
 }
 
 vector<vector<double>> scalar_mult(vector<vector<double>> A, double c){
@@ -64,16 +64,14 @@ vector<vector<double>> transpose(vector<vector<double>> A){
     int rows = A[0].size();
     int cols = A.size();
 
-    vector<vector<double>> newMat;
+    vector<vector<double>> new_mat(A[0].size(), vector<double>(A.size()));
 
     for(int r = 0; r<rows; r++){
-        vector<double> newRow;
         for(int c = 0; c<cols; c++){
-            newRow.push_back(A[c][r]);
+            new_mat[r][c] = A[c][r];
         }
-        newMat.push_back(newRow);
     }
-    return newMat;
+    return new_mat;
 }
 
 void print_matrix(vector<vector<double>> A){
@@ -107,20 +105,9 @@ double get_determinant(vector<vector<double>> A){
         det += sign*A[0][l]*get_determinant(nm); // alternate signs and multiply by determinant from dropped r,c pair
         sign = sign * -1;
     }
-
     return det;
 }
 
-vector<vector<double>> alt_signs(vector<vector<double>> A){
-    int sign = 1;
-    for(int i=0; i<A.size(); i++){
-        for(int l=0; l<A[0].size(); l++){
-            A[i][l] = A[i][l]*sign;
-            sign = sign * -1;
-        }
-    }
-    return A;
-}
 
 vector<vector<double>> inverse(vector<vector<double>> A){
     
@@ -153,20 +140,35 @@ vector<vector<double>> inverse(vector<vector<double>> A){
     return newMat;
 }
 
+int min(int a, int b){
+    if(a <= b){return a;}
+    else{return b;}
+}
+
 vector<double> diagonal(vector<vector<double>> A){
-    vector<double> diag;
-    for(int i=0; i < A.size(); i++){
-        diag.push_back(A[i][i]);
+    // switch to min of rown and cols
+    int len = min(A.size(), A[0].size());
+    vector<double> diag(len);
+    for(int i=0; i < len; i++){
+        diag[i] = A[i][i];
     }
     return diag;
 }
 
+int factorial(int x){
+    int res = x;
+    for(int i=2; i < x; ++i){
+        res = res*i;
+    }
+    return res;
+}
+
 vector<double> trivec(vector<vector<double>> A){
     // gets all values of lower triangle
-    vector<double> tri;
+    vector<double> tri(factorial(min(A.size(), A[0].size()) - 1));
     for(int i = 0; i < A[0].size(); i++){
         for(int l = i+1; l < A.size(); l++){
-            tri.push_back(A[l][i]);
+            tri[i] = A[l][i];
         }
     }
     return tri;
@@ -239,25 +241,32 @@ vector<double> vector_subtraction(vector<double> u, vector<double> v){
     return u;
 }
 
-unordered_map<string, vector<vector<double>>> QRDecomposition(vector<vector<double>> A){
+struct AQR_dec {
+    vector<vector<double>> A, Q, R;
+};
+
+AQR_dec QRDecomposition(vector<vector<double>> A){
     // QR Decomposition and return hash map of A, Q, and R
     // check if A is square
     if(A[0].size() != A.size()){
         throw "A must be square NxN";
     }
 
-    vector<vector<double>> Q, R, Qt, u;
+    vector<vector<double>> Q(A.size(), vector<double>(A[0].size())); // size dims of transpose
+    vector<vector<double>> R, Qt;
+
     vector<vector<double>> At = transpose(A);
+    vector<vector<double>> u(At[0].size(), vector<double> (At.size()));
 
     for(int i=0; i < At.size(); i++){
-        vector<double> ui = At[i]; // Use transpose to get A's column vectors easier
-        for(int l=0; l < u.size(); l++){
-            ui = vector_subtraction(ui, projection(u[l], At[i]));
+        u[i] = At[i]; // Use transpose to get A's column vectors easier
+        for(int l=0; l < i; l++){
+            u[i] = vector_subtraction(u[i], projection(u[l], At[i]));
         }
-        u.push_back(ui);
-        Q.push_back(unit_vector(ui));
+        Q[i] = unit_vector(u[i]);
     }
-    unordered_map<string, vector<vector<double>>> AQR;
+
+    AQR_dec AQR;
 
     Qt = Q; // since we were using the transpose to get column vectors
     Q = transpose(Q);
@@ -265,23 +274,23 @@ unordered_map<string, vector<vector<double>>> QRDecomposition(vector<vector<doub
     R = matmul(Qt, A);
     A = matmul(R, Q);
 
-    AQR["A"] = A;
-    AQR["Q"] = Q;
-    AQR["R"] = R;
+    AQR.A = A;
+    AQR.Q = Q;
+    AQR.R = R;
 
     return AQR;
 }
 
-unordered_map<string, vector<vector<double>>> QRAlgorithm(vector<vector<double>> A, const int max_iter){
+AQR_dec QRAlgorithm(vector<vector<double>> A, const int max_iter){
     // Run QR decomposition until A is upper-triangular
     int iter = 1;
-    unordered_map<string, vector<vector<double>>> AQRi;
+    AQR_dec AQRi;
     vector<double> tv = trivec(A);
     bool tv0 = trivec_zero(tv, 1e-10); 
 
     while(iter <= max_iter && tv0 == false){
         AQRi = QRDecomposition(A);
-        A = AQRi["A"];
+        A = AQRi.A;
         tv = trivec(A);
         tv0 = trivec_zero(tv, 1e-10);
         iter += 1;
@@ -300,11 +309,10 @@ void print_vec(vector<double> v){
     }
 }
 
-
 vector<double> eigenvalues(vector<vector<double>> A){
     // Eigenvalues are diagonal of A after running QR algorithm
-    unordered_map<string, vector<vector<double>>> AQR = QRAlgorithm(A, 1000);
-    A = AQR["A"];
+    AQR_dec AQR = QRAlgorithm(A, 1000);
+    A = AQR.A;
     return diagonal(A);
 }
 
@@ -335,23 +343,22 @@ vector<vector<double>> cholesky(vector<vector<double>> A){
 vector<vector<double>> diagonalize(vector<vector<double>> A){
     // P = matrix with eigenvalues as columns aka Q from QR algorithm
     // D = matrix with eigenvalues on diagonal
-    vector<vector<double>> P, D, Pi, PDPi;
-    unordered_map<string, vector<vector<double>>> AQR = QRAlgorithm(A, 1000);
-    P = AQR["Q"];
-    vector<double> eigenvals = diagonal(AQR["A"]);
+    vector<vector<double>> P, Pi, PDPi;
+    vector<vector<double>> D(A[0].size(), vector<double>(A.size()));
+    AQR_dec AQR = QRAlgorithm(A, 1000);
+    P = AQR.Q;
+    vector<double> eigenvals = diagonal(AQR.A);
 
     // Set the D matrix to diagonal matrix of eigenvals
-    for(int i=0; i<AQR["A"].size(); i++){
-        vector<double> row;
-        for(int l=0; l<AQR["A"].size(); l++){
+    for(int i=0; i<AQR.A.size(); i++){
+        for(int l=0; l<AQR.A.size(); l++){
             if(i != l){
-                row.push_back(0);
+                D[i][l] = 0;
             }
             else{
-                row.push_back(eigenvals[i]);
+                D[i][l] = eigenvals[i];
             }
         }
-        D.push_back(row);
     }
 
     Pi = inverse(P);
@@ -360,15 +367,19 @@ vector<vector<double>> diagonalize(vector<vector<double>> A){
     return D;
 }
 
-unordered_map<string, vector<vector<double>>> SVDecomp(vector<vector<double>> A){
+struct SVD_dec{
+    vector<vector<double>> U, VT, Sigma;
+};
+
+SVD_dec SVDecomp(vector<vector<double>> A){
     // Run QR decomposition until A is upper-triangular
     vector<vector<double>> AT = linalg::transpose(A);
     vector<vector<double>> ATA = linalg::matmul(AT, A);
     vector<vector<double>> AAT = linalg::matmul(A, AT);
     
-    unordered_map<string, vector<vector<double>>> ATA_AQR = QRAlgorithm(ATA, 1000);
-    unordered_map<string, vector<vector<double>>> AAT_AQR = QRAlgorithm(AAT, 1000);
-    vector<double> sigma2s = diagonal(ATA_AQR["A"]);
+    AQR_dec ATA_AQR = QRAlgorithm(ATA, 1000);
+    AQR_dec AAT_AQR = QRAlgorithm(AAT, 1000);
+    vector<double> sigma2s = diagonal(ATA_AQR.A);
     vector<vector<double>> Sigma = A;
 
     for(int i = 0; i < A.size(); i++){
@@ -382,15 +393,12 @@ unordered_map<string, vector<vector<double>>> SVDecomp(vector<vector<double>> A)
         }
     }
 
-    unordered_map<string, vector<vector<double>>> SVD;
-    SVD["U"] = AAT_AQR["Q"];
-    SVD["VT"] = transpose(ATA_AQR["Q"]);
-    SVD["Sigma"] = Sigma;
-
+    SVD_dec SVD;
+    SVD.U = AAT_AQR.Q;
+    SVD.VT = transpose(ATA_AQR.Q);
+    SVD.Sigma = Sigma;
     return SVD;
-    
 }
-
 }
 
 
@@ -422,9 +430,9 @@ class Matrix{
     }
 
     void get_eigens(){
-        unordered_map<string, vector<vector<double>>> AQR = linalg::QRAlgorithm(mat, 1000);
-        eigenvals = linalg::diagonal(AQR["A"]);
-        eigenvectors = AQR["Q"];
+        linalg::AQR_dec AQR = linalg::QRAlgorithm(mat, 1000);
+        eigenvals = linalg::diagonal(AQR.A);
+        eigenvectors = AQR.Q;
     }
 
     void print_matrix(){
@@ -460,15 +468,14 @@ int main(){
     linalg::print_vec(linalg::eigenvalues({{4,8,1},{0,1,0},{2,-3,-1}}));
     linalg::print_vec(linalg::eigenvalues({{3,1,2,4}, {0,1,0,-2}, {5,2,2,2}, {3,4,0,1}}));
 
-    unordered_map<string, vector<vector<double>>> AQR = linalg::QRAlgorithm({{1,2,3}, {3,2,1}, {2,1,3}}, 10000);
-    linalg::print_matrix(AQR["A"]);
+    linalg::AQR_dec AQR = linalg::QRAlgorithm({{1,2,3}, {3,2,1}, {2,1,3}}, 10000);
+    linalg::print_matrix(AQR.A);
 
     // SVD
     
     cout << "\nSVD";
-    unordered_map<string, vector<vector<double>>> SVD = linalg::SVDecomp({{1,2,3}, {3,2,1}, {2,1,3}, {-1,2,0}});
-    linalg::print_matrix(SVD["Sigma"]);
-
+    linalg::SVD_dec SVD = linalg::SVDecomp({{1,2,3}, {3,2,1}, {2,1,3}, {-1,2,0}});
+    linalg::print_matrix(SVD.Sigma);
 
     return 0;
 }
