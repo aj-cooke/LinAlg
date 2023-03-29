@@ -5,12 +5,10 @@
 
 using namespace std;
 
-// TODO: LU, redo OOP (1.0), parallelism (2.0), arrays and pointers (3.0)
-
 namespace linalg
 {
 
-vector<vector<double>> rcdrop(vector<vector<double>> A, int r, int c){
+vector<vector<double>> rcdrop(vector<vector<double>> &A, int r, int c){
     // get matrix by deleting a row and column, used for determinants and inverses
     vector<vector<double>> newMat;
     for(int i = 0; i < A.size(); i++){
@@ -27,7 +25,7 @@ vector<vector<double>> rcdrop(vector<vector<double>> A, int r, int c){
     return newMat;
 }
 
-vector<vector<double>> matmul(vector<vector<double>> A, vector<vector<double>> B){
+vector<vector<double>> matmul(vector<vector<double>> &A, vector<vector<double>> &B){
     // Matrix multimplication
     if(A[0].size() != B.size()){
         throw "num A rows must == num B cols";
@@ -47,7 +45,7 @@ vector<vector<double>> matmul(vector<vector<double>> A, vector<vector<double>> B
     return newMat;
 }
 
-vector<vector<double>> scalar_mult(vector<vector<double>> A, double c){
+vector<vector<double>> scalar_mult(vector<vector<double>> &A, double c){
     // multiply each element in matrix by a scalar
     for(int i = 0; i < A.size(); i++){
         for(int l = 0; l < A[0].size(); l++){
@@ -57,7 +55,7 @@ vector<vector<double>> scalar_mult(vector<vector<double>> A, double c){
     return A;
 }
 
-vector<vector<double>> transpose(vector<vector<double>> A){
+vector<vector<double>> transpose(vector<vector<double>> &A){
 
     //Swap rows and columns of matrix
     
@@ -76,7 +74,7 @@ vector<vector<double>> transpose(vector<vector<double>> A){
     return newMat;
 }
 
-void print_matrix(vector<vector<double>> A){
+void print_matrix(vector<vector<double>> &A){
     // Output matrix MxN
     for(int i = 0; i < A.size(); i++){
         for(int l = 0; l < A[0].size(); l++){
@@ -87,7 +85,7 @@ void print_matrix(vector<vector<double>> A){
     cout << "\n";
 }
 
-double get_determinant(vector<vector<double>> A){
+double get_determinant(vector<vector<double>> &A){
     if(A[0].size() != A.size()){
         throw "A must be square NxN";
     }
@@ -111,31 +109,22 @@ double get_determinant(vector<vector<double>> A){
     return det;
 }
 
-vector<vector<double>> alt_signs(vector<vector<double>> A){
-    int sign = 1;
-    for(int i=0; i<A.size(); i++){
-        for(int l=0; l<A[0].size(); l++){
-            A[i][l] = A[i][l]*sign;
-            sign = sign * -1;
-        }
-    }
-    return A;
-}
-
-vector<vector<double>> inverse(vector<vector<double>> A){
+vector<vector<double>> inverse(vector<vector<double>> &A){
     
     if(A.size() == 2 && A[0].size() == 2){
         double det = (A[0][0]*A[1][1] - A[0][1]*A[1][0]);
         if (det == 0){
             throw "Determinant is 0, no inverse exists";
         }
-        return scalar_mult({{A[1][1], -1*A[0][1]}, {-1*A[1][0], A[0][0]}}, 1/det); // Inverse is 1/determinant scalar mult matrix
+        vector<vector<double>> Adet = {{A[1][1], -1*A[0][1]}, {-1*A[1][0], A[0][0]}};
+        return scalar_mult(Adet, 1/det); // Inverse is 1/determinant scalar mult matrix
     }
 
     double det = get_determinant(A);
     if (det == 0){
             throw "Determinant is 0, no inverse exists";
     }
+
     vector<vector<double>> newMat = A;
     int sign = 1;
     for(int i=0; i<A.size(); i++){
@@ -153,7 +142,7 @@ vector<vector<double>> inverse(vector<vector<double>> A){
     return newMat;
 }
 
-vector<double> diagonal(vector<vector<double>> A){
+vector<double> diagonal(vector<vector<double>> &A){
     vector<double> diag;
     for(int i=0; i < A.size(); i++){
         diag.push_back(A[i][i]);
@@ -161,7 +150,7 @@ vector<double> diagonal(vector<vector<double>> A){
     return diag;
 }
 
-vector<double> trivec(vector<vector<double>> A){
+vector<double> trivec(vector<vector<double>> &A){
     // gets all values of lower triangle
     vector<double> tri;
     for(int i = 0; i < A[0].size(); i++){
@@ -172,7 +161,7 @@ vector<double> trivec(vector<vector<double>> A){
     return tri;
 }
 
-bool trivec_zero(vector<double> tri, double tol){
+bool trivec_zero(vector<double> &tri, double tol){
     // checks if all values of lower triangle are near zero
     bool lt = true;
     for(int i=0; i < tri.size(); i++){
@@ -183,7 +172,7 @@ bool trivec_zero(vector<double> tri, double tol){
     return lt;
 }
 
-double magnitude(vector<double> v){
+double magnitude(vector<double> &v){
     double s;
     for(int i=0; i < v.size(); i++){
         s += pow(v[i],2);
@@ -294,18 +283,16 @@ unordered_map<string, vector<vector<double>>> QRAlgorithm(vector<vector<double>>
     return AQRi;
 }
 
-void print_vec(vector<double> v){
+void print_vec(vector<double> &v){
     for(int i=0; i < v.size(); i++){
         cout << "\n" << v[i];
     }
 }
 
-
 vector<double> eigenvalues(vector<vector<double>> A){
     // Eigenvalues are diagonal of A after running QR algorithm
     unordered_map<string, vector<vector<double>>> AQR = QRAlgorithm(A, 1000);
-    A = AQR["A"];
-    return diagonal(A);
+    return diagonal(AQR["A"]);
 }
 
 vector<vector<double>> cholesky(vector<vector<double>> A){
@@ -333,7 +320,7 @@ vector<vector<double>> cholesky(vector<vector<double>> A){
 }
 
 vector<vector<double>> diagonalize(vector<vector<double>> A){
-    // P = matrix with eigenvalues as columns aka Q from QR algorithm
+    // P = matrix with eigenvectors as columns aka Q from QR algorithm
     // D = matrix with eigenvalues on diagonal
     vector<vector<double>> P, D, Pi, PDPi;
     unordered_map<string, vector<vector<double>>> AQR = QRAlgorithm(A, 1000);
@@ -436,38 +423,78 @@ class Matrix{
 
 int main(){
     // MATMUL TESTS
+    vector<vector<double>> a1 = {{1}};
+    vector<vector<double>> a2 = {{7}};
+    vector<vector<double>> am1 = linalg::matmul(a1, a2);
+    linalg::print_matrix(am1);
 
-    linalg::print_matrix(linalg::matmul({{1}}, {{7}}));
-    linalg::print_matrix(linalg::matmul({{1,2,3}, {4,5,6}}, {{10, 11}, {20,21}, {30,31}}));
-    linalg::print_matrix(linalg::matmul({{1,2,3,4}}, {{10, 11}, {20,21}, {30,31}, {4,5}}));
+    vector<vector<double>> a3 = {{1,2,3}, {4,5,6}};
+    vector<vector<double>> a4 = {{10, 11}, {20,21}, {30,31}};
+    vector<vector<double>> am2 = linalg::matmul(a3, a4);
+    linalg::print_matrix(am2);
+
+    vector<vector<double>> a5 = {{1,2,3,4}};
+    vector<vector<double>> a6 = {{10, 11}, {20,21}, {30,31}, {4,5}};
+    vector<vector<double>> am3 = linalg::matmul(a5, a6);
+    linalg::print_matrix(am3);
 
     // DETERMINANT TESTS
-    cout << "\nDeterminant: " << linalg::get_determinant({{-5, -4}, {-2,-3}});
-    cout << "\nDeterminant: " << linalg::get_determinant({{2,-3,1}, {2,0,-1}, {1,4,5}});
-    cout << "\nDeterminant: " << linalg::get_determinant({{4,3,2,2}, {0,1,-3,3}, {0,-1,3,3}, {0,3,1,1}});
+    vector<vector<double>> a7 = {{-5, -4}, {-2,-3}};
+    cout << "\nDeterminant: " << linalg::get_determinant(a7);
+
+    vector<vector<double>> a8 = {{2,-3,1}, {2,0,-1}, {1,4,5}};
+    cout << "\nDeterminant: " << linalg::get_determinant(a8);
+
+    vector<vector<double>> a9 = {{4,3,2,2}, {0,1,-3,3}, {0,-1,3,3}, {0,3,1,1}};
+    cout << "\nDeterminant: " << linalg::get_determinant(a9);
 
     // INVERSE TESTS
     cout << "\n\n";
-    linalg::print_matrix(linalg::inverse({{4,7}, {2,6}}));
-    linalg::print_matrix(linalg::inverse({{2,-3,1}, {2,0,-1}, {1,4,5}}));
-    linalg::print_matrix(linalg::inverse({{2,6,4,-1}, {3,0,7,4},{-3,3,4,1}, {8,-1,1,0}}));
-    linalg::print_matrix(linalg::inverse({{-3,-1,2,-3}, {-3,1,2,-2},{-2,3,0,1}, {1,-2,-3,1}}));
-    linalg::print_matrix(linalg::inverse({{2,3,7,-1,-1}, {1,4,-2,0,1},{3,2,2,-1,3}, {0,1,0,4,7}, {5,2,-3,-1,1}}));
+    vector<vector<double>> a10 = {{4,7}, {2,6}};
+    vector<vector<double>> i10 = linalg::inverse(a10);
+    linalg::print_matrix(i10);
+
+    vector<vector<double>> a11 = {{2,-3,1}, {2,0,-1}, {1,4,5}};
+    vector<vector<double>> i11 = linalg::inverse(a11);
+    linalg::print_matrix(i11);
+
+    vector<vector<double>> a12 = {{2,6,4,-1}, {3,0,7,4},{-3,3,4,1}, {8,-1,1,0}};
+    vector<vector<double>> i12 = linalg::inverse(a12);
+    linalg::print_matrix(i12);
+
+    vector<vector<double>> a13 = {{-3,-1,2,-3}, {-3,1,2,-2},{-2,3,0,1}, {1,-2,-3,1}};
+    vector<vector<double>> i13 = linalg::inverse(a13);
+    linalg::print_matrix(i13);
+
+    vector<vector<double>> a14 = {{2,3,7,-1,-1}, {1,4,-2,0,1},{3,2,2,-1,3}, {0,1,0,4,7}, {5,2,-3,-1,1}};
+    vector<vector<double>> i14 = linalg::inverse(a14);
+    linalg::print_matrix(i14);
 
     // EIGENVALUE TESTS
     cout << "\nEIGENVALS";
-    linalg::print_vec(linalg::eigenvalues({{1,2,3}, {3,2,1}, {2,1,3}}));
-    linalg::print_vec(linalg::eigenvalues({{4,8,1},{0,1,0},{2,-3,-1}}));
-    linalg::print_vec(linalg::eigenvalues({{3,1,2,4}, {0,1,0,-2}, {5,2,2,2}, {3,4,0,1}}));
 
-    unordered_map<string, vector<vector<double>>> AQR = linalg::QRAlgorithm({{1,2,3}, {3,2,1}, {2,1,3}}, 10000);
+    vector<vector<double>> a15 = {{1,2,3}, {3,2,1}, {2,1,3}};
+    vector<double> e15 = linalg::eigenvalues(a15);
+    linalg::print_vec(e15);
+
+    vector<vector<double>> a16 = {{4,8,1},{0,1,0},{2,-3,-1}};
+    vector<double> e16 = linalg::eigenvalues(a16);
+    linalg::print_vec(e16);
+
+    vector<vector<double>> a17 = {{3,1,2,4}, {0,1,0,-2}, {5,2,2,2}, {3,4,0,1}};
+    vector<double> e17 = linalg::eigenvalues(a17);
+    linalg::print_vec(e17);
+
+    vector<vector<double>> a18 = {{1,2,3}, {3,2,1}, {2,1,3}};
+    unordered_map<string, vector<vector<double>>> AQR = linalg::QRAlgorithm(a18, 10000);
     linalg::print_matrix(AQR["A"]);
 
     // SVD
     
     cout << "\nSVD";
     unordered_map<string, vector<vector<double>>> SVD = linalg::SVDecomp({{1,2,3}, {3,2,1}, {2,1,3}, {-1,2,0}});
-    linalg::print_matrix(SVD["Sigma"]);
+    vector<vector<double>> sig = SVD["Sigma"];
+    linalg::print_matrix(sig);
 
 
     return 0;
