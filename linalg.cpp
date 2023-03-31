@@ -10,16 +10,17 @@ namespace linalg
 
 vector<vector<double>> rcdrop(vector<vector<double>> &A, int r, int c){
     // get matrix by deleting a row and column, used for determinants and inverses
-    vector<vector<double>> newMat;
+    vector<vector<double>> newMat(A.size()-1, vector<double>(A[0].size()-1, 0)); // why on earth does not initializing 0 cause a bug?
+    int adj_i, adj_j;
     for(int i = 0; i < A.size(); i++){
         if(i != r){
-            vector<double> newRow;
-            for(int l = 0; l < A[0].size(); l++){
-                if(l != c){
-                    newRow.push_back(A[i][l]);
+            for(int j = 0; j < A[0].size(); j++){
+                if(j != c){
+                    if(i > r){adj_i = i-1;} else{adj_i = i;}
+                    if(j > c){adj_j = j-1;} else{adj_j = j;}
+                    newMat[adj_i][adj_j] = A[i][j];
                 }
             }
-            newMat.push_back(newRow);
         }
     }
     return newMat;
@@ -30,22 +31,20 @@ vector<vector<double>> matmul(vector<vector<double>> &A, vector<vector<double>> 
     if(A[0].size() != B.size()){
         throw "num A rows must == num B cols";
     }
-    vector<vector<double>> newMat;
+    vector<vector<double>> newMat(A.size(), vector<double>(B[0].size(), 0));
     for(int row = 0; row < A.size(); row++){
-        vector<double> curRow;
         for(int col = 0; col < B[0].size(); col++){
             double curVal = 0;
             for(int ind = 0; ind < A[0].size(); ind ++){
                 curVal += A[row][ind] * B[ind][col]; // Matrix i,j value is the dot product of A row and B column
             }
-            curRow.push_back(curVal);
+            newMat[row][col] = curVal;
         }
-        newMat.push_back(curRow);
     }
     return newMat;
 }
 
-vector<vector<double>> scalar_mult(vector<vector<double>> &A, double c){
+vector<vector<double>> scalar_mult(vector<vector<double>> A, double c){
     // multiply each element in matrix by a scalar
     for(int i = 0; i < A.size(); i++){
         for(int l = 0; l < A[0].size(); l++){
@@ -62,14 +61,12 @@ vector<vector<double>> transpose(vector<vector<double>> &A){
     int rows = A[0].size();
     int cols = A.size();
 
-    vector<vector<double>> newMat;
+    vector<vector<double>> newMat(rows, vector<double>(cols)); // AAAGGGHH Why does initializing with 0 cause a bug here?
 
     for(int r = 0; r<rows; r++){
-        vector<double> newRow;
         for(int c = 0; c<cols; c++){
-            newRow.push_back(A[c][r]);
+            newMat[r][c] = A[c][r];
         }
-        newMat.push_back(newRow);
     }
     return newMat;
 }
@@ -142,20 +139,31 @@ vector<vector<double>> inverse(vector<vector<double>> &A){
     return newMat;
 }
 
+int min(int a, int b){
+    if(a >= b){return a;} else{return b;}
+}
+
+
 vector<double> diagonal(vector<vector<double>> &A){
-    vector<double> diag;
+    vector<double> diag(min(A[0].size(), A.size()));
     for(int i=0; i < A.size(); i++){
-        diag.push_back(A[i][i]);
+        diag[i] = A[i][i];
     }
     return diag;
 }
 
+int sum_digits(int n){ // inclusive
+    return (n*(n+1))/2;
+}
+
 vector<double> trivec(vector<vector<double>> &A){
     // gets all values of lower triangle
-    vector<double> tri;
-    for(int i = 0; i < A[0].size(); i++){
-        for(int l = i+1; l < A.size(); l++){
-            tri.push_back(A[l][i]);
+    vector<double> tri(sum_digits(min(A.size(), A[0].size()) - 1));
+    int counter = 0;
+    for(int i = 0; i < A.size(); i++){
+        for(int l = 0; l < i; l++){
+            tri[counter] = A[i][l];
+            counter++;
         }
     }
     return tri;
@@ -235,7 +243,9 @@ unordered_map<string, vector<vector<double>>> QRDecomposition(vector<vector<doub
         throw "A must be square NxN";
     }
 
-    vector<vector<double>> Q, R, Qt, u;
+    vector<vector<double>> Q(A.size(), vector<double>(A[0].size(), 0));
+    vector<vector<double>> u(A.size(), vector<double>(A[0].size(), 0));
+    vector<vector<double>> R, Qt;
     vector<vector<double>> At = transpose(A);
 
     for(int i=0; i < At.size(); i++){
@@ -243,8 +253,8 @@ unordered_map<string, vector<vector<double>>> QRDecomposition(vector<vector<doub
         for(int l=0; l < u.size(); l++){
             ui = vector_subtraction(ui, projection(u[l], At[i]));
         }
-        u.push_back(ui);
-        Q.push_back(unit_vector(ui));
+        u[i] = ui;
+        Q[i] = unit_vector(ui);
     }
     unordered_map<string, vector<vector<double>>> AQR;
 
@@ -322,23 +332,22 @@ vector<vector<double>> cholesky(vector<vector<double>> A){
 vector<vector<double>> diagonalize(vector<vector<double>> A){
     // P = matrix with eigenvectors as columns aka Q from QR algorithm
     // D = matrix with eigenvalues on diagonal
-    vector<vector<double>> P, D, Pi, PDPi;
+    vector<vector<double>> P, Pi, PDPi;
     unordered_map<string, vector<vector<double>>> AQR = QRAlgorithm(A, 1000);
+    vector<vector<double>> D(AQR["A"].size(), vector<double>(AQR["A"].size()));
     P = AQR["Q"];
     vector<double> eigenvals = diagonal(AQR["A"]);
 
     // Set the D matrix to diagonal matrix of eigenvals
     for(int i=0; i<AQR["A"].size(); i++){
-        vector<double> row;
         for(int l=0; l<AQR["A"].size(); l++){
             if(i != l){
-                row.push_back(0);
+                D[i][l] = 0;
             }
             else{
-                row.push_back(eigenvals[i]);
+                D[i][l] = eigenvals[i];
             }
         }
-        D.push_back(row);
     }
 
     Pi = inverse(P);
